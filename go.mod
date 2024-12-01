@@ -1,4 +1,4 @@
-module geppit
+module github.com/ruanzerah/geppit
 
 go 1.23.2
 
