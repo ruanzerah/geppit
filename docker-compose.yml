@@ -1,15 +1,53 @@
 services:
-  psql_bp:
-    image: postgres:latest
+  #geppit:
+  #build:
+  #context: .
+  # dockerfile: Dockerfile
+  #ports:
+  #- "8080:8080"
+  #environment:
+  #- DB_HOST=${DB_HOST}
+  #- DB_PORT=${DB_PORT}
+  #- DB_USER=${DB_USERNAME}
+  #- DB_PASSWORD=${DB_PASSWORD}
+  # - DB_NAME=${DB_DATABASE}
+  #depends_on:
+  #  - gepost
+  #volumes:
+  #  - .:/app
+  #   env_file: .env
+  gepost:
+    image: postgres:16
     restart: unless-stopped
+    hostname: postgres
     environment:
-      POSTGRES_DB: ${BLUEPRINT_DB_DATABASE}
-      POSTGRES_USER: ${BLUEPRINT_DB_USERNAME}
-      POSTGRES_PASSWORD: ${BLUEPRINT_DB_PASSWORD}
+      POSTGRES_DB: ${DB_DATABASE}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
-      - "${BLUEPRINT_DB_PORT}:5432"
+      - "${DB_PORT}:5432"
     volumes:
-      - psql_volume_bp:/var/lib/postgresql/data
+      - gepost_volume:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  migrate:
+    image: migrate/migrate
+    depends_on:
+      gepost:
+        condition: service_healthy
+    environment:
+      DB_URL: ${DB_URL}
+    entrypoint:
+      [
+        "sh",
+        "-c",
+        "sleep 10 && migrate -path /migrations -database ${DB_URL} up",
+      ]
+    volumes:
+      - ./sql/migrations:/migrations
 
 volumes:
-  psql_volume_bp:
+  gepost_volume:
